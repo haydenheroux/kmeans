@@ -1,3 +1,4 @@
+from typing import Callable
 import numpy as np
 import cv2
 from numpy.typing import NDArray
@@ -37,34 +38,28 @@ def create_kmeans(num_clusters, mini_batch=True):
     return sklearn.cluster.KMeans(n_clusters=num_clusters)
 
 
-def cluster_pixels(image, num_clusters):
+def cluster_pixels(pixels, num_clusters):
     """
     Clusters the pixels into k pixels.
     Returns the cluster index per pixel, and the cluster centers.
     """
-    rgb_pixels = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).reshape(-1, 3)
     kmeans = create_kmeans(num_clusters)
-    cluster_index_per_pixel = kmeans.fit_predict(rgb_pixels)
+    cluster_index_per_pixel = kmeans.fit_predict(pixels)
     return cluster_index_per_pixel, kmeans.cluster_centers_
 
 
-def apply_palette(image, palette: int | NDArray):
+def cluster_and_map(
+    image, num_clusters: int, color_mapper: Callable[[NDArray], NDArray]
+):
     """
-    Converts an image to the palette.
+    Clusters the pixels into then maps each cluster to a color.
     """
-    cluster_index_per_pixel = None
-    centers = None
-    cluster_index_to_palette_color = None
-    if isinstance(palette, int):
-        cluster_index_per_pixel, centers = cluster_pixels(image, num_clusters=palette)
-        cluster_index_to_palette_color = np.array(centers)
-    elif isinstance(palette, np.ndarray):
-        cluster_index_per_pixel, centers = cluster_pixels(
-            image, num_clusters=len(palette)
-        )
-        cluster_index_to_palette_color = np.array(
-            [closest_color(center, palette) for center in centers]
-        )
+    rgb_pixels = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).reshape(-1, 3)
+    cluster_index_per_pixel, centers = cluster_pixels(rgb_pixels, num_clusters)
+    centers = np.array(centers)
+    cluster_index_to_palette_color = np.array(
+        [color_mapper(center) for center in centers]
+    )
     new_image = (
         cluster_index_to_palette_color[cluster_index_per_pixel]
         .reshape(image.shape)
@@ -82,19 +77,22 @@ if __name__ == "__main__":
     image = cv2.imread(filename)
     original_height, original_width = image.shape[:2]
     pixelated = False
-    palette = 16
+    num_clusters = 16
     all_palettes = palettes.load("palettes.yaml")
+    color_mapper = lambda color: color
     if len(sys.argv) == 4:
         pixel_size = int(sys.argv[3])
         image = pixelate(image, pixel_size)
         pixelated = True
     if len(sys.argv) >= 3:
-        palette_str = sys.argv[2].lower()
-        if palette_str.isdigit():
-            palette = int(palette_str)
-        elif palette_str in all_palettes:
-            palette = all_palettes[palette_str]
-    transformed_image = apply_palette(image, palette)
+        arg = sys.argv[2].lower()
+        if arg.isdigit():
+            num_clusters = int(arg)
+        elif arg in all_palettes:
+            palette = all_palettes[arg]
+            num_clusters = len(palette)
+            color_mapper = lambda color: closest_color(color, palette)
+    transformed_image = cluster_and_map(image, num_clusters, color_mapper)
     if pixelated:
         transformed_image = cv2.resize(
             transformed_image,
