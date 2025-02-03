@@ -25,7 +25,7 @@ class RGB:
         return f"#{rgb[0]:02x}{rgb[1]:02x}{rgb[2]:02x}"
 
     @classmethod
-    def decode(cls, z: NDArray, M=255) -> NDArray:
+    def to_linear(cls, z: NDArray, M=255) -> NDArray:
         """Converts RGB values to linear RGB values."""
         u = z / M
         linear = np.where(
@@ -36,7 +36,7 @@ class RGB:
         return linear
 
     @classmethod
-    def encode(cls, v: NDArray, M=255) -> NDArray:
+    def from_linear(cls, v: NDArray, M=255) -> NDArray:
         """Converts linear RGB values to RGB values."""
         E = np.where(
             v <= cls.Const.V,
