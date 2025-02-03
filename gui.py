@@ -14,6 +14,7 @@ from PyQt6.QtGui import QMouseEvent, QPixmap, QImage
 import cv2
 import kmeans
 import palette
+import qdarktheme
 
 def format_pixel_size(tick: int) -> str:
     return f"""Pixel Size: {2**tick}"""
@@ -23,6 +24,7 @@ class ImageEditor(QWidget):
         super().__init__()
         self.setWindowTitle("kmeans - image editor")
 
+        self.file_path = None
         self.palettes = palette.load("palettes.yaml")
 
         main_layout = QVBoxLayout()
@@ -35,12 +37,23 @@ class ImageEditor(QWidget):
         main_layout.addWidget(self.image_label)
 
         middle_layout = QHBoxLayout()
+        middle_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         palettes = ["auto"] + list(self.palettes.keys())
         self.palette_dropdown = QComboBox()
         self.palette_dropdown.addItems(palettes)
-        self.palette_dropdown.currentIndexChanged.connect(self.process_image)
+        self.palette_dropdown.currentIndexChanged.connect(self.main)
         middle_layout.addWidget(self.palette_dropdown)
+
+        default_palette_size = 16
+        self.size_label = QLabel("Palette Size: 16")
+        middle_layout.addWidget(self.size_label)
+        self.palette_size_slider = QSlider(Qt.Orientation.Horizontal)
+        self.palette_size_slider.setMinimum(2)
+        self.palette_size_slider.setMaximum(64)
+        self.palette_size_slider.setValue(default_palette_size)
+        self.palette_size_slider.valueChanged.connect(self.main)
+        middle_layout.addWidget(self.palette_size_slider)
 
         default_pixel_size_tick = 0
         self.slider_label = QLabel(format_pixel_size(tick=default_pixel_size_tick))
@@ -50,15 +63,14 @@ class ImageEditor(QWidget):
         self.pixel_size_slider.setMaximum(6)
         self.pixel_size_slider.setValue(default_pixel_size_tick)
         self.pixel_size_slider.setTickInterval(1)
-        self.pixel_size_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
-        self.pixel_size_slider.valueChanged.connect(self.update_slider_label)
-        self.pixel_size_slider.valueChanged.connect(self.process_image)
+        self.pixel_size_slider.setTickPosition(QSlider.TickPosition.TicksBothSides)
+        self.pixel_size_slider.valueChanged.connect(self.main)
         middle_layout.addWidget(self.pixel_size_slider)
 
         color_spaces = list(kmeans.ColorSpace)
         self.color_space_dropdown = QComboBox()
         self.color_space_dropdown.addItems(color_spaces)
-        self.color_space_dropdown.currentIndexChanged.connect(self.process_image)
+        self.color_space_dropdown.currentIndexChanged.connect(self.main)
         middle_layout.addWidget(self.color_space_dropdown)
 
         main_layout.addLayout(middle_layout)
@@ -75,9 +87,23 @@ class ImageEditor(QWidget):
             self, "Open Image File", "", "Images (*.png *.jpg *.jpeg *.bmp *.gif)"
         )
         if self.file_path:
-            self.process_image()
+            self.main()
 
-    def process_image(self):
+    def change_palette_size(self):
+        self.size_label.setText(f"Palette Size: {self.palette_size_slider.value()}")
+        palette = self.palette_dropdown.currentText()
+        if palette == "auto":
+            self.palette_size_slider.setEnabled(True)
+        else:
+            pal = self.palettes[palette]
+            self.palette_size_slider.setValue(pal.shape[0])
+            self.palette_size_slider.setEnabled(False)
+
+
+    def main(self):
+        self.change_palette_size()
+        self.slider_label.setText(format_pixel_size(self.pixel_size_slider.value()))
+
         if not self.file_path:
             return
 
@@ -94,8 +120,7 @@ class ImageEditor(QWidget):
         app.use_image(image, pixel_size)
         palette = self.palette_dropdown.currentText()
         if palette == "auto":
-            # TODO Add number of clusters
-            app.auto_generate_palette(16)
+            app.auto_generate_palette(self.palette_size_slider.value())
         else:
             app.use_palette(self.palettes[palette])
         color_space = self.color_space_dropdown.currentText()
@@ -115,12 +140,10 @@ class ImageEditor(QWidget):
             )
         )
 
-    def update_slider_label(self, tick):
-        self.slider_label.setText(format_pixel_size(tick))
-
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    qdarktheme.setup_theme()
     window = ImageEditor()
     window.show()
     sys.exit(app.exec())
