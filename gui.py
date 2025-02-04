@@ -13,11 +13,14 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QMouseEvent, QPixmap, QImage
 import cv2
 import kmeans
+import color
 import palette
 import qdarktheme
 
+
 def format_pixel_size(tick: int) -> str:
     return f"""Pixel Size: {2**tick}"""
+
 
 class ImageEditor(QWidget):
     def __init__(self):
@@ -67,7 +70,7 @@ class ImageEditor(QWidget):
         self.pixel_size_slider.valueChanged.connect(self.main)
         middle_layout.addWidget(self.pixel_size_slider)
 
-        color_spaces = list(kmeans.ColorSpace)
+        color_spaces = list(color.ColorSpace)
         self.color_space_dropdown = QComboBox()
         self.color_space_dropdown.addItems(color_spaces)
         self.color_space_dropdown.currentIndexChanged.connect(self.main)
@@ -99,7 +102,6 @@ class ImageEditor(QWidget):
             self.palette_size_slider.setValue(pal.shape[0])
             self.palette_size_slider.setEnabled(False)
 
-
     def main(self):
         self.change_palette_size()
         self.slider_label.setText(format_pixel_size(self.pixel_size_slider.value()))
@@ -110,7 +112,9 @@ class ImageEditor(QWidget):
         pixmap = QPixmap(self.file_path)
         self.image_label.setPixmap(
             pixmap.scaled(
-                self.image_label.width(), self.image_label.height(), Qt.AspectRatioMode.KeepAspectRatio
+                self.image_label.width(),
+                self.image_label.height(),
+                Qt.AspectRatioMode.KeepAspectRatio,
             )
         )
 
@@ -124,12 +128,14 @@ class ImageEditor(QWidget):
         else:
             app.use_palette(self.palettes[palette])
         color_space = self.color_space_dropdown.currentText()
-        app.use_color_space(kmeans.ColorSpace(color_space))
+        app.use_color_space(color.ColorSpace(color_space))
         new_image = app.process()
         new_image = cv2.cvtColor(new_image, cv2.COLOR_BGR2RGB)
         height, width, channels = new_image.shape
         # FIXME
-        qimage = QImage(new_image.data, width, height, channels * width, QImage.Format.Format_RGB888)
+        qimage = QImage(
+            new_image.data, width, height, channels * width, QImage.Format.Format_RGB888
+        )
         display_pixmap = QPixmap.fromImage(qimage)
 
         self.display_label.setPixmap(

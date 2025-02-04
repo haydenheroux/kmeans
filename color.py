@@ -1,5 +1,18 @@
+import enum
 import numpy as np
-from numpy.typing import NDArray
+
+
+class ColorSpace(enum.StrEnum):
+    RGB = "rgb"
+    LINEAR_RGB = "linear"
+    OKLAB = "oklab"
+
+    def __contains__(self, key: str) -> bool:
+        try:
+            ColorSpace(key)
+        except ValueError:
+            return False
+        return True
 
 
 class RGB:
@@ -25,7 +38,7 @@ class RGB:
         return f"#{rgb[0]:02x}{rgb[1]:02x}{rgb[2]:02x}"
 
     @classmethod
-    def to_linear(cls, z: NDArray, M=255) -> NDArray:
+    def to_linear(cls, z: np.typing.NDArray, M=255) -> np.typing.NDArray:
         """Converts RGB values to linear RGB values."""
         u = z / M
         linear = np.where(
@@ -36,7 +49,7 @@ class RGB:
         return linear
 
     @classmethod
-    def from_linear(cls, v: NDArray, M=255) -> NDArray:
+    def from_linear(cls, v: np.typing.NDArray, M=255) -> np.typing.NDArray:
         """Converts linear RGB values to RGB values."""
         E = np.where(
             v <= cls.Const.V,
@@ -71,14 +84,14 @@ class Oklab:
         )
 
     @classmethod
-    def linear_triplet_to_lab_triplet(cls, rgb: NDArray) -> NDArray:
+    def linear_triplet_to_lab_triplet(cls, rgb: np.typing.NDArray) -> np.typing.NDArray:
         """Converts linear RGB values to Oklab values."""
         lms = np.einsum("ij,...j->...i", cls.Const.RGB_LIN_TO_LMS, rgb)
         lms = np.cbrt(lms)
         return np.einsum("ij,...j->...i", cls.Const.M_2, lms)
 
     @classmethod
-    def lab_triplet_to_linear_triplet(cls, lab: NDArray) -> NDArray:
+    def lab_triplet_to_linear_triplet(cls, lab: np.typing.NDArray) -> np.typing.NDArray:
         """Converts Oklab values to linear RGB values."""
         lms = np.einsum("ij,...j->...i", cls.Const.M_2.I, lab)
         lms = lms**3

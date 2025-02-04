@@ -1,14 +1,11 @@
-import enum
-from typing import Callable
+import typing
 import numpy as np
 import cv2
-from numpy.typing import NDArray
 import sklearn.cluster
 import scipy.spatial
 import sys
 import palette as palettes
 import color
-import enum
 
 
 def closest_color(color, palette, space_mapper_getter):
@@ -24,27 +21,14 @@ def closest_color(color, palette, space_mapper_getter):
     return palette[np.argmin(distances)]
 
 
-class ColorSpace(enum.StrEnum):
-    RGB = "rgb"
-    LINEAR_RGB = "linear"
-    OKLAB = "oklab"
-
-    def __contains__(self, key: str) -> bool:
-        try:
-            ColorSpace(key)
-        except ValueError:
-            return False
-        return True
-
-
 class KMeansApp:
     dimensions: cv2.typing.Size | None
     scaled_shape: cv2.typing.Size | None
-    pixels: NDArray | None
-    palette: NDArray | None
+    pixels: np.typing.NDArray | None
+    palette: np.typing.NDArray | None
     num_clusters: int
     pixel_size: int
-    color_space: ColorSpace
+    color_space: color.ColorSpace
 
     def __init__(self):
         self.dimensions = None
@@ -52,7 +36,7 @@ class KMeansApp:
         self.palette = None
         self.num_clusters = 16
         self.pixel_size = 1
-        self.color_space = ColorSpace.RGB
+        self.color_space = color.ColorSpace.RGB
 
     def use_image(self, image: cv2.typing.MatLike, pixel_size: int = 1):
         height, width = image.shape[:2]
@@ -69,7 +53,7 @@ class KMeansApp:
         self.pixels = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).reshape(-1, 3)
         self.pixel_size = pixel_size
 
-    def use_palette(self, palette: NDArray):
+    def use_palette(self, palette: np.typing.NDArray):
         self.palette = palette
         self.num_clusters = len(palette)
 
@@ -77,32 +61,32 @@ class KMeansApp:
         self.palette = None
         self.num_clusters = num_clusters
 
-    def use_color_space(self, color_space: ColorSpace):
+    def use_color_space(self, color_space: color.ColorSpace):
         self.color_space = color_space
 
-    def color_mapper(self) -> Callable[[NDArray], NDArray]:
+    def color_mapper(self) -> typing.Callable[[np.typing.NDArray], np.typing.NDArray]:
         if self.palette is None:
             return lambda color: color
         return lambda color: closest_color(color, self.palette, self.space_mapper)
 
-    def space_mapper(self) -> Callable[[NDArray], NDArray]:
+    def space_mapper(self) -> typing.Callable[[np.typing.NDArray], np.typing.NDArray]:
         match self.color_space:
-            case ColorSpace.RGB:
+            case color.ColorSpace.RGB:
                 return lambda colors: colors
-            case ColorSpace.LINEAR_RGB:
+            case color.ColorSpace.LINEAR_RGB:
                 return color.RGB.to_linear
-            case ColorSpace.OKLAB:
+            case color.ColorSpace.OKLAB:
                 return lambda colors: color.Oklab.linear_triplet_to_lab_triplet(
                     color.RGB.to_linear(colors)
                 )
 
-    def space_unmapper(self) -> Callable[[NDArray], NDArray]:
+    def space_unmapper(self) -> typing.Callable[[np.typing.NDArray], np.typing.NDArray]:
         match self.color_space:
-            case ColorSpace.RGB:
+            case color.ColorSpace.RGB:
                 return lambda colors: colors
-            case ColorSpace.LINEAR_RGB:
+            case color.ColorSpace.LINEAR_RGB:
                 return color.RGB.from_linear
-            case ColorSpace.OKLAB:
+            case color.ColorSpace.OKLAB:
                 return lambda colors: color.RGB.from_linear(
                     color.Oklab.lab_triplet_to_linear_triplet(colors)
                 )
@@ -123,10 +107,10 @@ class KMeansApp:
 
     def cluster_and_map(
         self,
-        color_mapper: Callable[[NDArray], NDArray],
-        space_mapper: Callable[[NDArray], NDArray],
-        space_unmapper: Callable[[NDArray], NDArray],
-    ) -> NDArray:
+        color_mapper: typing.Callable[[np.typing.NDArray], np.typing.NDArray],
+        space_mapper: typing.Callable[[np.typing.NDArray], np.typing.NDArray],
+        space_unmapper: typing.Callable[[np.typing.NDArray], np.typing.NDArray],
+    ) -> np.typing.NDArray:
         """
         Clusters the pixels into then maps each cluster to a color.
         """
@@ -168,8 +152,8 @@ if __name__ == "__main__":
     app.use_image(image)
     all_palettes = palettes.load("palettes.yaml")
     if len(sys.argv) >= 5:
-        if (color_space := sys.argv[4].lower()) in ColorSpace:
-            app.use_color_space(ColorSpace(color_space))
+        if (color_space := sys.argv[4].lower()) in color.ColorSpace:
+            app.use_color_space(color.ColorSpace(color_space))
     if len(sys.argv) >= 4:
         if sys.argv[3].isdigit() and (pixel_size := int(sys.argv[3])) != 1:
             app.use_image(image, pixel_size)
