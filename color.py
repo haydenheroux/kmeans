@@ -1,5 +1,18 @@
 import enum
 import numpy as np
+import scipy
+
+def closest_color(color, palette, space_mapper_getter):
+    """
+    Returns the color in the palette that is closest to the color.
+    """
+    space_mapper = space_mapper_getter()
+    palette = space_mapper(palette)
+    distances = [
+        scipy.spatial.distance.euclidean(color, palette_color)
+        for palette_color in palette
+    ]
+    return palette[np.argmin(distances)]
 
 
 class ColorSpace(enum.StrEnum):

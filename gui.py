@@ -12,8 +12,8 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QMouseEvent, QPixmap, QImage
 import cv2
-import kmeans
 import color
+import kmeans
 import palette
 import qdarktheme
 
@@ -118,18 +118,18 @@ class ImageEditor(QWidget):
             )
         )
 
-        app = kmeans.KMeansApp()
+        main = kmeans.KMeansApp()
         image = cv2.imread(self.file_path)
         pixel_size = 2 ** self.pixel_size_slider.value()
-        app.use_image(image, pixel_size)
+        main.use_image(image, pixel_size)
         palette = self.palette_dropdown.currentText()
         if palette == "auto":
-            app.auto_generate_palette(self.palette_size_slider.value())
+            main.auto_generate_palette(self.palette_size_slider.value())
         else:
-            app.use_palette(self.palettes[palette])
+            main.use_palette(self.palettes[palette])
         color_space = self.color_space_dropdown.currentText()
-        app.use_color_space(color.ColorSpace(color_space))
-        new_image = app.process()
+        main.use_color_space(color.ColorSpace(color_space))
+        new_image = main.process()
         new_image = cv2.cvtColor(new_image, cv2.COLOR_BGR2RGB)
         height, width, channels = new_image.shape
         # FIXME
@@ -146,10 +146,12 @@ class ImageEditor(QWidget):
             )
         )
 
-
-if __name__ == "__main__":
+def main():
     app = QApplication(sys.argv)
     qdarktheme.setup_theme()
     window = ImageEditor()
     window.show()
     sys.exit(app.exec())
+
+if __name__ == "__main__":
+    main()

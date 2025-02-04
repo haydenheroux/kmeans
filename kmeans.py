@@ -1,24 +1,7 @@
-import typing
-import numpy as np
 import cv2
-import sklearn.cluster
-import scipy.spatial
-import sys
-import palette as palettes
+import numpy as np
 import color
-
-
-def closest_color(color, palette, space_mapper_getter):
-    """
-    Returns the color in the palette that is closest to the color.
-    """
-    space_mapper = space_mapper_getter()
-    palette = space_mapper(palette)
-    distances = [
-        scipy.spatial.distance.euclidean(color, palette_color)
-        for palette_color in palette
-    ]
-    return palette[np.argmin(distances)]
+import typing
 
 
 class KMeansApp:
@@ -66,8 +49,8 @@ class KMeansApp:
 
     def color_mapper(self) -> typing.Callable[[np.typing.NDArray], np.typing.NDArray]:
         if self.palette is None:
-            return lambda color: color
-        return lambda color: closest_color(color, self.palette, self.space_mapper)
+            return lambda colors: colors
+        return lambda colors: color.closest_color(colors, self.palette, self.space_mapper)
 
     def space_mapper(self) -> typing.Callable[[np.typing.NDArray], np.typing.NDArray]:
         match self.color_space:
@@ -141,29 +124,3 @@ class KMeansApp:
         cluster_index_per_pixel = kmeans.fit_predict(pixels)
         return cluster_index_per_pixel, kmeans.cluster_centers_
 
-
-if __name__ == "__main__":
-    if len(sys.argv) == 1 or len(sys.argv) > 5:
-        print(f"usage: {sys.argv[0]} <filename> <palette> <pixelsize> <space>")
-        sys.exit(1)
-    filename = sys.argv[1]
-    image = cv2.imread(filename)
-    app = KMeansApp()
-    app.use_image(image)
-    all_palettes = palettes.load("palettes.yaml")
-    if len(sys.argv) >= 5:
-        if (color_space := sys.argv[4].lower()) in color.ColorSpace:
-            app.use_color_space(color.ColorSpace(color_space))
-    if len(sys.argv) >= 4:
-        if sys.argv[3].isdigit() and (pixel_size := int(sys.argv[3])) != 1:
-            app.use_image(image, pixel_size)
-    if len(sys.argv) >= 3:
-        arg = sys.argv[2].lower()
-        if arg in all_palettes:
-            app.use_palette(all_palettes[arg])
-        elif arg.isdigit():
-            app.auto_generate_palette(int(arg))
-    new_image = app.process()
-    cv2.imshow("img", new_image)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
