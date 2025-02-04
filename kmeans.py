@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import color
 import typing
+import sklearn
 
 
 class KMeansApp:
