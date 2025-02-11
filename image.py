@@ -63,9 +63,11 @@ class Image:
         return new_image
 
     def qimage(self) -> QImage:
+        cv2_image = self.cv2()
+        height, width, channels = cv2_image.shape
         # FIXME
         return QImage(
-            self.pixels.data, width, height, channels * width, QImage.Format.Format_RGB888
+            cv2_image.data, width, height, channels * width, QImage.Format.Format_BGR888
         )
 
 
