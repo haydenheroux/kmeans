@@ -118,33 +118,35 @@ class ImageEditor(QWidget):
             )
         )
 
-        main = kmeans.KMeansApp()
+        config = kmeans.KMeansAppConfig()
         image = cv2.imread(self.file_path)
         pixel_size = 2 ** self.pixel_size_slider.value()
-        main.use_image(image, pixel_size)
+        config.use_image(image, pixel_size)
         palette = self.palette_dropdown.currentText()
         if palette == "auto":
-            main.auto_generate_palette(self.palette_size_slider.value())
+            config.auto_generate_palette(self.palette_size_slider.value())
         else:
-            main.use_palette(self.palettes[palette])
+            config.use_palette(self.palettes[palette])
         color_space = self.color_space_dropdown.currentText()
-        main.use_color_space(color.ColorSpace(color_space))
-        new_image = main.process()
-        new_image = cv2.cvtColor(new_image, cv2.COLOR_BGR2RGB)
-        height, width, channels = new_image.shape
-        # FIXME
-        qimage = QImage(
-            new_image.data, width, height, channels * width, QImage.Format.Format_RGB888
-        )
-        display_pixmap = QPixmap.fromImage(qimage)
-
-        self.display_label.setPixmap(
-            display_pixmap.scaled(
-                self.display_label.width(),
-                self.display_label.height(),
-                Qt.AspectRatioMode.KeepAspectRatio,
+        config.use_color_space(color.ColorSpace(color_space))
+        pipeline = config.create_pipeline()
+        if pipeline:
+            new_image = pipeline.run()
+            new_image = cv2.cvtColor(new_image, cv2.COLOR_BGR2RGB)
+            height, width, channels = new_image.shape
+            # FIXME
+            qimage = QImage(
+                new_image.data, width, height, channels * width, QImage.Format.Format_RGB888
             )
-        )
+            display_pixmap = QPixmap.fromImage(qimage)
+
+            self.display_label.setPixmap(
+                display_pixmap.scaled(
+                    self.display_label.width(),
+                    self.display_label.height(),
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                )
+            )
 
 def main():
     app = QApplication(sys.argv)
