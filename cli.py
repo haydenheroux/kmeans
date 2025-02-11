@@ -10,15 +10,15 @@ def main():
         sys.exit(1)
     filename = sys.argv[1]
     image = cv2.imread(filename)
+    pixel_size = 1
     config = kmeans.KMeansAppConfig()
-    config.use_image(image)
     all_palettes = palette.load("palettes.yaml")
     if len(sys.argv) >= 5:
         if (color_space := sys.argv[4].lower()) in color.ColorSpace:
             config.use_color_space(color.ColorSpace(color_space))
     if len(sys.argv) >= 4:
         if sys.argv[3].isdigit() and (pixel_size := int(sys.argv[3])) != 1:
-            config.use_image(image, pixel_size)
+            pixel_size = pixel_size
     if len(sys.argv) >= 3:
         arg = sys.argv[2].lower()
         if arg in all_palettes:
@@ -27,8 +27,8 @@ def main():
             config.auto_generate_palette(int(arg))
     pipeline = config.create_pipeline()
     if pipeline:
-        new_image = pipeline.run()
-        cv2.imshow("img", new_image)
+        new_image = pipeline.run(kmeans.Image.from_cv2(image, pixel_size))
+        cv2.imshow("img", new_image.cv2())
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 

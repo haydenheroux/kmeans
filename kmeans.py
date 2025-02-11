@@ -7,6 +7,7 @@ import clusterer
 
 Mapper = typing.Callable[[np.typing.NDArray], np.typing.NDArray]
 
+
 @dataclasses.dataclass
 class Shape:
     width: int
@@ -30,13 +31,47 @@ class Shape:
     def __str__(self) -> str:
         return f"{self.width=} {self.height=} {self.channels=}"
 
+
+@dataclasses.dataclass
+class Image:
+    pixels: np.typing.NDArray
+    pixels_shape: Shape
+    image_shape: Shape
+
+    @classmethod
+    def from_cv2(cls, image: cv2.typing.MatLike, downscale_factor: int = 1):
+        original_image_shape = image.shape
+        if downscale_factor != 1:
+            image = cv2.resize(
+                image,
+                (0, 0),
+                fx=1 / downscale_factor,
+                fy=1 / downscale_factor,
+                interpolation=cv2.INTER_AREA,
+            )
+        pixels = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).reshape(-1, 3)
+        return cls(
+            pixels=pixels,
+            pixels_shape=Shape.from_numpy(image.shape),
+            image_shape=Shape.from_numpy(original_image_shape),
+        )
+
+    def cv2(self) -> cv2.typing.MatLike:
+        new_image = self.pixels.reshape(self.pixels_shape.numpy()).astype(np.uint8)
+        new_image = cv2.cvtColor(new_image, cv2.COLOR_RGB2BGR)
+        if self.pixels_shape != self.image_shape:
+            new_image = cv2.resize(
+                new_image,
+                self.image_shape.cv2(),
+                interpolation=cv2.INTER_NEAREST,
+            )
+        return new_image
+
+
 class Pipeline:
     color_mapper: Mapper
     space_mapper: Mapper
     space_unmapper: Mapper
-    pixels: np.typing.NDArray
-    pixels_shape: Shape
-    result_shape: Shape
     clusterer_: clusterer.Clusterer
 
     def __init__(
@@ -44,38 +79,26 @@ class Pipeline:
         color_mapper: Mapper,
         space_mapper: Mapper,
         space_unmapper: Mapper,
-        pixels: np.typing.NDArray,
-        pixels_shape: Shape,
-        scaled_shape: Shape,
         clusterer: clusterer.Clusterer,
     ):
         self.color_mapper = color_mapper
         self.space_mapper = space_mapper
         self.space_unmapper = space_unmapper
-        self.pixels = pixels
-        self.pixels_shape = pixels_shape
-        self.result_shape = scaled_shape
         self.clusterer_ = clusterer
 
-    def run(self) -> cv2.typing.MatLike:
-        transformed_pixels = self.cluster_and_map()
-        new_image = transformed_pixels.reshape(self.pixels_shape.numpy()).astype(np.uint8)
-        new_image = cv2.cvtColor(new_image, cv2.COLOR_RGB2BGR)
-        if self.pixels_shape != self.result_shape:
-            new_image = cv2.resize(
-                new_image,
-                self.result_shape.cv2(),
-                interpolation=cv2.INTER_NEAREST,
-            )
-        return new_image
+    def run(self, image: Image) -> Image:
+        transformed_pixels = self.cluster_and_map(image.pixels)
+        return Image(
+            pixels=transformed_pixels,
+            pixels_shape=image.pixels_shape,
+            image_shape=image.image_shape,
+        )
 
-    def cluster_and_map(
-        self,
-    ) -> np.typing.NDArray:
+    def cluster_and_map(self, pixels: np.typing.NDArray) -> np.typing.NDArray:
         """
         Clusters the pixels into then maps each cluster to a color.
         """
-        mapped_pixels = self.space_mapper(self.pixels)
+        mapped_pixels = self.space_mapper(pixels)
         centers = self.clusterer_.fit(mapped_pixels)
         labels = self.clusterer_.predict(mapped_pixels)
         centers = np.array(centers)
@@ -88,35 +111,16 @@ class Pipeline:
 
 
 class KMeansAppConfig:
-    original_shape: Shape | None
-    scaled_shape: Shape | None
-    pixels: np.typing.NDArray | None
     palette: np.typing.NDArray | None
     num_clusters: int
     pixel_size: int
     color_space: color.ColorSpace
 
     def __init__(self):
-        self.original_shape = None
-        self.pixels = None
         self.palette = None
         self.num_clusters = 16
         self.pixel_size = 1
         self.color_space = color.ColorSpace.RGB
-
-    def use_image(self, image: cv2.typing.MatLike, pixel_size: int = 1):
-        self.original_shape = Shape.from_numpy(image.shape)
-        # TODO Add a check for pixel_size being equal to 1
-        image = cv2.resize(
-            image,
-            (0, 0),
-            fx=1 / pixel_size,
-            fy=1 / pixel_size,
-            interpolation=cv2.INTER_AREA,
-        )
-        self.scaled_shape = Shape.from_numpy(image.shape)
-        self.pixels = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).reshape(-1, 3)
-        self.pixel_size = pixel_size
 
     def use_palette(self, palette: np.typing.NDArray):
         self.palette = palette
@@ -159,15 +163,9 @@ class KMeansAppConfig:
                 )
 
     def create_pipeline(self) -> Pipeline | None:
-        if self.pixels is None or self.original_shape is None or self.scaled_shape is None:
-            return None
-
         return Pipeline(
             self.create_color_mapper(),
             self.create_space_mapper(),
             self.create_space_unmapper(),
-            self.pixels,
-            self.scaled_shape,
-            self.original_shape,
             clusterer.MiniBatchKMeans(self.num_clusters),
         )

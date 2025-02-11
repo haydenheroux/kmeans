@@ -121,7 +121,6 @@ class ImageEditor(QWidget):
         config = kmeans.KMeansAppConfig()
         image = cv2.imread(self.file_path)
         pixel_size = 2 ** self.pixel_size_slider.value()
-        config.use_image(image, pixel_size)
         palette = self.palette_dropdown.currentText()
         if palette == "auto":
             config.auto_generate_palette(self.palette_size_slider.value())
@@ -131,8 +130,8 @@ class ImageEditor(QWidget):
         config.use_color_space(color.ColorSpace(color_space))
         pipeline = config.create_pipeline()
         if pipeline:
-            new_image = pipeline.run()
-            new_image = cv2.cvtColor(new_image, cv2.COLOR_BGR2RGB)
+            new_image = pipeline.run(kmeans.Image.from_cv2(image, pixel_size))
+            new_image = cv2.cvtColor(new_image.cv2(), cv2.COLOR_BGR2RGB)
             height, width, channels = new_image.shape
             # FIXME
             qimage = QImage(
