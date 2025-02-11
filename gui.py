@@ -10,12 +10,13 @@ from PyQt6.QtWidgets import (
     QFileDialog,
 )
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QMouseEvent, QPixmap, QImage
+from PyQt6.QtGui import QMouseEvent, QPixmap
 import cv2
-import color
-import kmeans
-import palette
 import qdarktheme
+from color import ColorSpace
+from image import Image
+from pipeline import PipelineConfig
+from palette import load
 
 
 def format_pixel_size(tick: int) -> str:
@@ -28,7 +29,7 @@ class ImageEditor(QWidget):
         self.setWindowTitle("kmeans - image editor")
 
         self.file_path = None
-        self.palettes = palette.load("palettes.yaml")
+        self.palettes = load("palettes.yaml")
 
         main_layout = QVBoxLayout()
 
@@ -70,7 +71,7 @@ class ImageEditor(QWidget):
         self.pixel_size_slider.valueChanged.connect(self.main)
         middle_layout.addWidget(self.pixel_size_slider)
 
-        color_spaces = list(color.ColorSpace)
+        color_spaces = list(ColorSpace)
         self.color_space_dropdown = QComboBox()
         self.color_space_dropdown.addItems(color_spaces)
         self.color_space_dropdown.currentIndexChanged.connect(self.main)
@@ -118,7 +119,7 @@ class ImageEditor(QWidget):
             )
         )
 
-        config = kmeans.KMeansAppConfig()
+        config = PipelineConfig()
         image = cv2.imread(self.file_path)
         pixel_size = 2 ** self.pixel_size_slider.value()
         palette = self.palette_dropdown.currentText()
@@ -127,18 +128,11 @@ class ImageEditor(QWidget):
         else:
             config.use_palette(self.palettes[palette])
         color_space = self.color_space_dropdown.currentText()
-        config.use_color_space(color.ColorSpace(color_space))
+        config.use_color_space(ColorSpace(color_space))
         pipeline = config.create_pipeline()
         if pipeline:
-            new_image = pipeline.run(kmeans.Image.from_cv2(image, pixel_size))
-            new_image = cv2.cvtColor(new_image.cv2(), cv2.COLOR_BGR2RGB)
-            height, width, channels = new_image.shape
-            # FIXME
-            qimage = QImage(
-                new_image.data, width, height, channels * width, QImage.Format.Format_RGB888
-            )
-            display_pixmap = QPixmap.fromImage(qimage)
-
+            new_image = pipeline.run(Image.from_cv2(image, pixel_size))
+            display_pixmap = QPixmap.fromImage(new_image.qimage())
             self.display_label.setPixmap(
                 display_pixmap.scaled(
                     self.display_label.width(),
@@ -147,12 +141,14 @@ class ImageEditor(QWidget):
                 )
             )
 
+
 def main():
     app = QApplication(sys.argv)
     qdarktheme.setup_theme()
     window = ImageEditor()
     window.show()
     sys.exit(app.exec())
+
 
 if __name__ == "__main__":
     main()
