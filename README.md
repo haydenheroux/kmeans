@@ -30,10 +30,17 @@ python -m pip install -r requirements.txt
 
 ## usage
 
-Run this project using any Python interpreter.
+Using the GUI application allows tuning the pipeline parameters and previewing the effects in real-time.
 
 ```
-python kmeans.py
+python gui.py
+```
+
+The CLI application has the same features as the GUI application.
+Run using the following arguments:
+
+```
+python cli.py <filename> <palette> <pixelsize> <space>
 ```
 
 ### arguments
@@ -43,6 +50,7 @@ python kmeans.py
 | `filename` | `str`: The filename of the image to run the algorithm on. | `None` (required) |
 | `palette` | `int \| str`: Either the number of colors to use for an auto-generated palette, or the name of a builtin palette (see [palettes](palettes)). | `16` |
 | `pixelsize` | `int \| None`: If `int`, the size of each pixel after reupsampling. If `None`, no downsampling is performed. | `None` |
+| `space` | `str`: The color space to run the pipeline in. One of `rgb`, `linear`, or `oklab`. | `rgb` |
 
 
 ## palettes
