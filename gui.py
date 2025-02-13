@@ -1,6 +1,8 @@
+import os
 import sys
 from PyQt6.QtWidgets import (
     QApplication,
+    QPushButton,
     QWidget,
     QVBoxLayout,
     QHBoxLayout,
@@ -23,18 +25,23 @@ def format_pixel_size(tick: int) -> str:
     return f"""Pixel Size: {2**tick}"""
 
 
+def new_file_path_of(file_path: str) -> str:
+    name, extension = os.path.splitext(file_path)
+    return f"{name}-edit{extension}"
+
+
 class PipelineRunner(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("kmeans - image editor")
 
         self.file_path = None
+        self.output_image = None
         self.palettes = load("palettes.yaml")
-        self.config = PipelineConfig()
 
         main_layout = QVBoxLayout()
 
-        self.input_image = QLabel("Drop an image here or click to upload", self)
+        self.input_image = QLabel("Click to select image", self)
         self.input_image.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.input_image.setStyleSheet("border: 2px dashed gray; padding: 20px;")
         self.input_image.setFixedHeight(400)
@@ -52,7 +59,8 @@ class PipelineRunner(QWidget):
         self.pixel_size_slider.setValue(default_pixel_size_tick)
         self.pixel_size_slider.setTickInterval(1)
         self.pixel_size_slider.setTickPosition(QSlider.TickPosition.TicksBothSides)
-        self.pixel_size_slider.valueChanged.connect(self.main)
+        self.pixel_size_slider.valueChanged.connect(self.run_pipeline)
+        self.pixel_size_slider.valueChanged.connect(self.change_pixel_size)
         pixel_layout.addWidget(self.pixel_size_slider)
         main_layout.addLayout(pixel_layout)
 
@@ -61,7 +69,8 @@ class PipelineRunner(QWidget):
         palettes = ["auto"] + list(self.palettes.keys())
         self.palette_dropdown = QComboBox()
         self.palette_dropdown.addItems(palettes)
-        self.palette_dropdown.currentIndexChanged.connect(self.main)
+        self.palette_dropdown.currentIndexChanged.connect(self.run_pipeline)
+        self.palette_dropdown.currentIndexChanged.connect(self.change_palette_size)
         color_layout.addWidget(self.palette_dropdown)
         default_palette_size = 16
         self.size_label = QLabel("Palette Size: 16")
@@ -70,18 +79,23 @@ class PipelineRunner(QWidget):
         self.palette_size_slider.setMinimum(2)
         self.palette_size_slider.setMaximum(64)
         self.palette_size_slider.setValue(default_palette_size)
-        self.palette_size_slider.valueChanged.connect(self.main)
+        self.palette_size_slider.valueChanged.connect(self.run_pipeline)
+        self.palette_size_slider.valueChanged.connect(self.change_palette_size)
         color_layout.addWidget(self.palette_size_slider)
         self.color_space_dropdown = QComboBox()
         self.color_space_dropdown.addItems(list(ColorSpace))
-        self.color_space_dropdown.currentIndexChanged.connect(self.main)
+        self.color_space_dropdown.currentIndexChanged.connect(self.run_pipeline)
         color_layout.addWidget(self.color_space_dropdown)
         main_layout.addLayout(color_layout)
 
-        self.output_image = QLabel(self)
-        self.output_image.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.output_image.setFixedHeight(400)
-        main_layout.addWidget(self.output_image)
+        self.output_image_viewer = QLabel(self)
+        self.output_image_viewer.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.output_image_viewer.setFixedHeight(400)
+        main_layout.addWidget(self.output_image_viewer)
+
+        self.save_button = QPushButton("&Save")
+        self.save_button.clicked.connect(self.save_image)
+        main_layout.addWidget(self.save_button)
 
         self.setLayout(main_layout)
 
@@ -90,7 +104,15 @@ class PipelineRunner(QWidget):
             self, "Open Image File", "", "Images (*.png *.jpg *.jpeg *.bmp *.gif)"
         )
         if self.file_path:
-            self.main()
+            pixmap = QPixmap(self.file_path)
+            self.input_image.setPixmap(
+                pixmap.scaled(
+                    self.input_image.width(),
+                    self.input_image.height(),
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                )
+            )
+            self.run_pipeline()
 
     def change_palette_size(self):
         self.size_label.setText(f"Palette Size: {self.palette_size_slider.value()}")
@@ -102,42 +124,44 @@ class PipelineRunner(QWidget):
             self.palette_size_slider.setValue(pal.shape[0])
             self.palette_size_slider.setEnabled(False)
 
-    def main(self):
-        self.change_palette_size()
+    def change_pixel_size(self):
         self.slider_label.setText(format_pixel_size(self.pixel_size_slider.value()))
 
+    def run_pipeline(self):
         if not self.file_path:
             return
-
-        pixmap = QPixmap(self.file_path)
-        self.input_image.setPixmap(
-            pixmap.scaled(
-                self.input_image.width(),
-                self.input_image.height(),
-                Qt.AspectRatioMode.KeepAspectRatio,
-            )
-        )
-
-        image = cv2.imread(self.file_path)
         pixel_size = 2 ** self.pixel_size_slider.value()
-        palette = self.palette_dropdown.currentText()
-        if palette == "auto":
-            self.config.auto_generate_palette(self.palette_size_slider.value())
-        else:
-            self.config.use_palette(self.palettes[palette])
-        color_space = self.color_space_dropdown.currentText()
-        self.config.use_color_space(ColorSpace(color_space))
-        pipeline = self.config.create_pipeline()
+        image = Image.from_cv2(cv2.imread(self.file_path), pixel_size)
+
+        pipeline = self.create_config().create_pipeline()
         if pipeline:
-            new_image = pipeline.run(Image.from_cv2(image, pixel_size))
-            display_pixmap = QPixmap.fromImage(new_image.qimage())
-            self.output_image.setPixmap(
-                display_pixmap.scaled(
-                    self.output_image.width(),
-                    self.output_image.height(),
+            self.output_image = pipeline.run(image).qimage()
+            self.output_image_viewer.setPixmap(
+                QPixmap.fromImage(self.output_image).scaled(
+                    self.output_image_viewer.width(),
+                    self.output_image_viewer.height(),
                     Qt.AspectRatioMode.KeepAspectRatio,
                 )
             )
+            self.save_button.setText(f"&Save {new_file_path_of(self.file_path)}")
+
+    def save_image(self):
+        if not self.file_path or not self.output_image:
+            return
+        self.output_image.save(new_file_path_of(self.file_path))
+
+    def create_config(self):
+        config = PipelineConfig()
+
+        palette = self.palette_dropdown.currentText()
+        if palette == "auto":
+            config.auto_generate_palette(self.palette_size_slider.value())
+        else:
+            config.use_palette(self.palettes[palette])
+        color_space = self.color_space_dropdown.currentText()
+        config.use_color_space(ColorSpace(color_space))
+
+        return config
 
 
 def main():
