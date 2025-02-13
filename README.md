@@ -3,7 +3,7 @@
 This project implements an algorithm for stylizing images that clusters pixels by color, then maps each cluster to another color.
 Optionally, the image can be downsampled prior to mapping colors, which produces a pixelated effect when reupscaled.
 
-![Demonstrating using the GUI application](images/gui.py)
+![Demonstrating using the GUI application](images/gui.png)
 
 <table>
 	<tr>
