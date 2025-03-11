@@ -1,5 +1,6 @@
 import abc
 import sklearn
+import numpy as np
 
 
 class Clusterer(abc.ABC):
@@ -12,11 +13,11 @@ class Clusterer(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def fit(self, pixels):
+    def fit(self, pixels) -> np.typing.NDArray:
         pass
 
     @abc.abstractmethod
-    def predict(self, pixels):
+    def predict(self, pixels) -> np.typing.NDArray:
         pass
 
 

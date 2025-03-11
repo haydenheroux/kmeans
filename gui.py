@@ -18,7 +18,8 @@ import qdarktheme
 from color import ColorSpace
 from image import Image
 from pipeline import PipelineConfig
-from palette import load
+from palette import load, save
+import numpy as np
 
 
 def format_pixel_size(tick: int) -> str:
@@ -88,6 +89,10 @@ class PipelineRunner(QWidget):
         color_layout.addWidget(self.color_space_dropdown)
         main_layout.addLayout(color_layout)
 
+        self.write_palette_button = QPushButton("&Use Palette")
+        self.write_palette_button.clicked.connect(self.use_palette)
+        main_layout.addWidget(self.write_palette_button)
+
         self.output_image_viewer = QLabel(self)
         self.output_image_viewer.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.output_image_viewer.setFixedHeight(400)
@@ -117,7 +122,7 @@ class PipelineRunner(QWidget):
     def change_palette_size(self):
         self.size_label.setText(f"Palette Size: {self.palette_size_slider.value()}")
         palette = self.palette_dropdown.currentText()
-        if palette == "auto":
+        if self.using_auto_generated_palette():
             self.palette_size_slider.setEnabled(True)
         else:
             pal = self.palettes[palette]
@@ -133,9 +138,9 @@ class PipelineRunner(QWidget):
         pixel_size = 2 ** self.pixel_size_slider.value()
         image = Image.from_cv2(cv2.imread(self.file_path), pixel_size)
 
-        pipeline = self.create_config().create_pipeline()
-        if pipeline:
-            self.output_image = pipeline.run(image).qimage()
+        self.pipeline = self.create_config().create_pipeline()
+        if self.pipeline:
+            self.output_image = self.pipeline.run(image).qimage()
             self.output_image_viewer.setPixmap(
                 QPixmap.fromImage(self.output_image).scaled(
                     self.output_image_viewer.width(),
@@ -150,11 +155,15 @@ class PipelineRunner(QWidget):
             return
         self.output_image.save(new_file_path_of(self.file_path))
 
+    def using_auto_generated_palette(self) -> bool:
+        palette = self.palette_dropdown.currentText()
+        return palette == "auto" or palette == ""
+
     def create_config(self):
         config = PipelineConfig()
 
         palette = self.palette_dropdown.currentText()
-        if palette == "auto":
+        if self.using_auto_generated_palette():
             config.auto_generate_palette(self.palette_size_slider.value())
         else:
             config.use_palette(self.palettes[palette])
@@ -162,6 +171,20 @@ class PipelineRunner(QWidget):
         config.use_color_space(ColorSpace(color_space))
 
         return config
+
+    def use_palette(self):
+        if self.pipeline and self.file_path and self.using_auto_generated_palette():
+            # TODO Refactor image / pixel logic to run once
+            pixel_size = 2 ** self.pixel_size_slider.value()
+            image = Image.from_cv2(cv2.imread(self.file_path), pixel_size)
+            rgb_centers = self.pipeline.clusterer.fit(image.pixels).astype(np.uint8)
+            file_name = os.path.basename(self.file_path)
+            new_palette_name, _ = os.path.splitext(file_name)
+            self.palettes[new_palette_name] = rgb_centers
+            save("palettes-edit.yaml", self.palettes)
+            self.palette_dropdown.clear()
+            self.palette_dropdown.addItems(["auto"] + list(self.palettes.keys()))
+            self.palette_dropdown.setCurrentText(new_palette_name)
 
 
 def main():
