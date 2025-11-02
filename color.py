@@ -64,10 +64,11 @@ class RGB:
     @classmethod
     def from_linear(cls, v: np.typing.NDArray, M=255) -> np.typing.NDArray:
         """Converts linear RGB values to RGB values."""
+        v_clip = np.clip(v, 0, None)
         E = np.where(
-            v <= cls.Const.V,
-            cls.Const.A * v,
-            (1 + cls.Const.C) * (v ** (1 / cls.Const.Γ)) - cls.Const.C,
+            v_clip <= cls.Const.V,
+            cls.Const.A * v_clip,
+            (1 + cls.Const.C) * (v_clip ** (1 / cls.Const.Γ)) - cls.Const.C,
         )
         return np.round(M * E).astype(np.uint8)
 

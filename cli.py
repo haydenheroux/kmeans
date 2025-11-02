@@ -1,19 +1,23 @@
 import cv2
 import sys
+
 import palette
 import color
 from image import Image
 from pipeline import PipelineConfig
 
 def main():
-    if len(sys.argv) == 1 or len(sys.argv) > 5:
-        print(f"usage: {sys.argv[0]} <filename> <palette> <pixelsize> <space>")
+    if len(sys.argv) == 1 or len(sys.argv) > 6:
+        print(f"usage: {sys.argv[0]} <filename> <palette> <pixelsize> <space> <noisesize>")
         sys.exit(1)
     filename = sys.argv[1]
     image = cv2.imread(filename)
     pixel_size = 1
     config = PipelineConfig()
     all_palettes = palette.load("palettes.yaml")
+    if len(sys.argv) >= 6:
+        if sys.argv[5].replace(".", "").isdigit() and (noise_size := float(sys.argv[5])) >= 0:
+            config.use_noise_size(noise_size)
     if len(sys.argv) >= 5:
         if (color_space := sys.argv[4].lower()) in color.ColorSpace:
             config.use_color_space(color.ColorSpace(color_space))

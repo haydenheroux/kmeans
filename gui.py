@@ -21,10 +21,17 @@ from pipeline import PipelineConfig
 from palette import load, save
 import numpy as np
 
+def calculate_pixel_size(tick: int) -> int:
+    return 2 ** tick
 
 def format_pixel_size(tick: int) -> str:
-    return f"""Pixel Size: {2**tick}"""
+    return f"Pixel Size: {calculate_pixel_size(tick)}"
 
+def calculate_noise_size(tick: int) -> float:
+    return 0.005 * 1.5 ** tick
+
+def format_noise_size(tick: int) -> str:
+    return f"Noise Size: {calculate_noise_size(tick):.3f}"
 
 def new_file_path_of(file_path: str) -> str:
     name, extension = os.path.splitext(file_path)
@@ -52,8 +59,8 @@ class PipelineRunner(QWidget):
         pixel_layout = QHBoxLayout()
         pixel_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         default_pixel_size_tick = 0
-        self.slider_label = QLabel(format_pixel_size(tick=default_pixel_size_tick))
-        pixel_layout.addWidget(self.slider_label)
+        self.pixel_size_slider_label = QLabel(format_pixel_size(tick=default_pixel_size_tick))
+        pixel_layout.addWidget(self.pixel_size_slider_label)
         self.pixel_size_slider = QSlider(Qt.Orientation.Horizontal)
         self.pixel_size_slider.setMinimum(0)
         self.pixel_size_slider.setMaximum(6)
@@ -64,6 +71,22 @@ class PipelineRunner(QWidget):
         self.pixel_size_slider.valueChanged.connect(self.change_pixel_size)
         pixel_layout.addWidget(self.pixel_size_slider)
         main_layout.addLayout(pixel_layout)
+
+        noise_layout = QHBoxLayout()
+        noise_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        default_noise_size_tick = 0
+        self.noise_size_slider_label = QLabel(format_noise_size(tick=default_noise_size_tick))
+        noise_layout.addWidget(self.noise_size_slider_label)
+        self.noise_size_slider = QSlider(Qt.Orientation.Horizontal)
+        self.noise_size_slider.setMinimum(0)
+        self.noise_size_slider.setMaximum(6)
+        self.noise_size_slider.setValue(default_noise_size_tick)
+        self.noise_size_slider.setTickInterval(1)
+        self.noise_size_slider.setTickPosition(QSlider.TickPosition.TicksBothSides)
+        self.noise_size_slider.valueChanged.connect(self.run_pipeline)
+        self.noise_size_slider.valueChanged.connect(self.change_noise_size)
+        noise_layout.addWidget(self.noise_size_slider)
+        main_layout.addLayout(noise_layout)
 
         color_layout = QHBoxLayout()
         color_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -130,12 +153,15 @@ class PipelineRunner(QWidget):
             self.palette_size_slider.setEnabled(False)
 
     def change_pixel_size(self):
-        self.slider_label.setText(format_pixel_size(self.pixel_size_slider.value()))
+        self.pixel_size_slider_label.setText(format_pixel_size(self.pixel_size_slider.value()))
+
+    def change_noise_size(self):
+        self.noise_size_slider_label.setText(format_noise_size(self.noise_size_slider.value()))
 
     def run_pipeline(self):
         if not self.file_path:
             return
-        pixel_size = 2 ** self.pixel_size_slider.value()
+        pixel_size = calculate_pixel_size(self.pixel_size_slider.value())
         image = Image.from_cv2(cv2.imread(self.file_path), pixel_size)
 
         self.pipeline = self.create_config().create_pipeline()
@@ -169,6 +195,8 @@ class PipelineRunner(QWidget):
             config.use_palette(self.palettes[palette])
         color_space = self.color_space_dropdown.currentText()
         config.use_color_space(ColorSpace(color_space))
+        noise_size = calculate_noise_size(self.noise_size_slider.value())
+        config.use_noise_size(noise_size)
 
         return config
 
