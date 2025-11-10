@@ -140,6 +140,7 @@ class PipelineRunner(QWidget):
                     Qt.AspectRatioMode.KeepAspectRatio,
                 )
             )
+            self.pixel_size_slider.setValue(6)
             self.run_pipeline()
 
     def change_palette_size(self):
