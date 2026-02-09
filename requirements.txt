@@ -1,6 +1,6 @@
 PyQt6
 numpy
 opencv-python
-pyqtdarktheme-fork
+pyqtdarktheme
 pyyaml
 scikit-learn
