@@ -18,6 +18,20 @@ Optionally, the image can be downsampled prior to mapping colors, which produces
 
 Photograph taken by Daniel Mennerich ([Flickr](https://flic.kr/p/2oBWGQv)).
 
+<table>
+	<tr>
+		<th>Before</th>
+		<th>After</th>
+	</tr>
+	<tr>
+		<td><img src="images/providence.jpg" alt="Picture of the Providence, Rhode Island skyline at night."></td>
+		<td><img src="images/providence-edit.png" alt="The same picture of the Providence, Rhode Island skyline after being stylized using pixelation and color clustering."></td>
+	</tr>
+</table>
+
+Photograph taken by Macaolards ([Wikipedia](https://commons.wikimedia.org/wiki/File:Providence,_RI_skyline_.jpg)).
+
+
 ## setup
 
 It is recommended to use a [virtual environment](https://docs.python.org/3/library/venv.html) to manage dependencies.
@@ -40,7 +54,7 @@ The CLI application has the same features as the GUI application.
 Run using the following arguments:
 
 ```
-python cli.py <filename> <palette> <pixelsize> <space>
+python cli.py <filename> <palette> <pixelsize> <space> <noisesize>
 ```
 
 ### arguments
@@ -51,6 +65,7 @@ python cli.py <filename> <palette> <pixelsize> <space>
 | `palette` | `int \| str`: Either the number of colors to use for an auto-generated palette, or the name of a builtin palette (see [palettes](palettes)). | `16` |
 | `pixelsize` | `int \| None`: If `int`, the size of each pixel after reupsampling. If `None`, no downsampling is performed. | `None` |
 | `space` | `str`: The color space to run the pipeline in. One of `rgb`, `linear`, or `oklab`. | `rgb` |
+| `noisesize` | `number`: The amount of noize to add to the image, measured in standard deviations. Effect varies depending on `space`. | `None` |
 
 
 ## palettes
