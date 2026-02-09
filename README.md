@@ -1,7 +1,7 @@
 # kmeans - stylized images using image segmentation and pixelation
 
 This project implements an algorithm for stylizing images that clusters pixels by color, then maps each cluster to another color.
-Optionally, the image can be downsampled prior to mapping colors, which produces a pixelated effect when reupscaled.
+Optionally, the image can be downsampled or have noise added prior to mapping colors, which produces a pixelated or grainy effect when reupscaled.
 
 ![Demonstrating using the GUI application](images/gui.png)
 
@@ -21,10 +21,16 @@ Photograph taken by Daniel Mennerich ([Flickr](https://flic.kr/p/2oBWGQv)).
 <table>
 	<tr>
 		<th>Before</th>
-		<th>After</th>
 	</tr>
 	<tr>
 		<td><img src="images/providence.jpg" alt="Picture of the Providence, Rhode Island skyline at night."></td>
+	</tr>
+</table>
+<table>
+	<tr>
+		<th>After</th>
+	</tr>
+	<tr>
 		<td><img src="images/providence-edit.png" alt="The same picture of the Providence, Rhode Island skyline after being stylized using pixelation and color clustering."></td>
 	</tr>
 </table>
