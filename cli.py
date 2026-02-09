@@ -14,6 +14,7 @@ def main():
     image = cv2.imread(filename)
     pixel_size = 1
     config = PipelineConfig()
+    config.use_noise_size(0)
     all_palettes = palette.load("palettes.yaml")
     if len(sys.argv) >= 6:
         if sys.argv[5].replace(".", "").isdigit() and (noise_size := float(sys.argv[5])) >= 0:

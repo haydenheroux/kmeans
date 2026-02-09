@@ -65,7 +65,7 @@ python cli.py <filename> <palette> <pixelsize> <space> <noisesize>
 | `palette` | `int \| str`: Either the number of colors to use for an auto-generated palette, or the name of a builtin palette (see [palettes](palettes)). | `16` |
 | `pixelsize` | `int \| None`: If `int`, the size of each pixel after reupsampling. If `None`, no downsampling is performed. | `None` |
 | `space` | `str`: The color space to run the pipeline in. One of `rgb`, `linear`, or `oklab`. | `rgb` |
-| `noisesize` | `number`: The amount of noize to add to the image, measured in standard deviations. Effect varies depending on `space`. | `None` |
+| `noisesize` | `number`: The amount of noize to add to the image, measured in standard deviations. Effect varies depending on `space`. | `0.0` |
 
 
 ## palettes
