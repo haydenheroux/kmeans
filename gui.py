@@ -218,7 +218,7 @@ class PipelineRunner(QWidget):
 
 def main():
     app = QApplication(sys.argv)
-    qdarktheme.setup_theme()
+    # qdarktheme.setup_theme("auto")
     window = PipelineRunner()
     window.show()
     sys.exit(app.exec())

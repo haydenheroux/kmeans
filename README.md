@@ -21,10 +21,10 @@ Photograph taken by Daniel Mennerich ([Flickr](https://flic.kr/p/2oBWGQv)).
 <table>
 	<tr>
 		<th>Before</th>
-		<th>After</th>
+		<td><img src="images/providence.jpg" alt="Picture of the Providence, Rhode Island skyline at night."></td>
 	</tr>
 	<tr>
-		<td><img src="images/providence.jpg" alt="Picture of the Providence, Rhode Island skyline at night."></td>
+		<th>After</th>
 		<td><img src="images/providence-edit.png" alt="The same picture of the Providence, Rhode Island skyline after being stylized using pixelation and color clustering."></td>
 	</tr>
 </table>
